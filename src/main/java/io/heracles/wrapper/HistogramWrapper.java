@@ -1,60 +1,63 @@
-package io.heracles.wrapper.base;
+package io.heracles.wrapper;
 
 import io.heracles.label.LabelExtractor;
 import io.heracles.label.LabelMissingStrategy;
 import io.heracles.label.LabelNames;
-import io.prometheus.client.Summary;
+import io.heracles.wrapper.base.BaseCollectorWrapper;
+import io.heracles.wrapper.base.BaseWrapperBuilder;
+import io.prometheus.client.Histogram;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.Map;
 import java.util.concurrent.Callable;
 
 /**
- * 带标签解析的Summary
+ * 带标签解析的Histogram
  *
  * @author walter
- * @date 2021/01/08 00:09
+ * @date 2021/01/08 00:00
  **/
-public class SummaryWrapper extends BaseCollectorWrapper<SummaryWrapper, Summary> {
-    public static class Builder extends BaseWrapperBuilder<SummaryWrapper, Builder, Summary, Summary.Builder> {
+public class HistogramWrapper extends BaseCollectorWrapper<HistogramWrapper, Histogram> {
+    public static class Builder extends BaseWrapperBuilder<HistogramWrapper, Builder, Histogram, Histogram.Builder> {
         protected Builder() {
-            super(Summary.build());
+            super(Histogram.build());
         }
 
-        public Builder quantile(double quantile, double error) {
-            realBuilder.quantile(quantile, error);
+        public Builder buckets(double... buckets) {
+            realBuilder.buckets(buckets);
             return this;
         }
 
-        public Builder maxAgeSeconds(long maxAgeSeconds) {
-            realBuilder.maxAgeSeconds(maxAgeSeconds);
+        public Builder linearBuckets(double start, double width, int count) {
+            realBuilder.linearBuckets(start, width, count);
             return this;
         }
 
-        public Builder ageBuckets(int ageBuckets) {
-            realBuilder.ageBuckets(ageBuckets);
+        public Builder exponentialBuckets(double start, double factor, int count) {
+            realBuilder.exponentialBuckets(start, factor, count);
             return this;
         }
 
         @Override
-        protected SummaryWrapper create(LabelNames labelNames, LabelMissingStrategy labelMissingStrategy, Map<Class<?>, LabelExtractor<?>> labelExtractorMap, Summary summary) {
-            return new SummaryWrapper(labelNames, labelMissingStrategy, labelExtractorMap, summary);
+        protected HistogramWrapper create(LabelNames labelNames, LabelMissingStrategy labelMissingStrategy, Map<Class<?>, LabelExtractor<?>> labelExtractorMap, Histogram histogram) {
+            return new HistogramWrapper(labelNames, labelMissingStrategy, labelExtractorMap, histogram);
         }
     }
-
-    private static final Summary.Child FAKE_CHILD = Summary.build()
-            .name("fake_summary").help("fake").quantile(0.5, 0.1)
-            .labelNames("fake")
-            .create()
-            .labels("fake");
 
     public static Builder build() {
         return new Builder();
     }
 
-    protected SummaryWrapper(LabelNames labelNames, LabelMissingStrategy labelMissingStrategy, Map<Class<?>, LabelExtractor<?>> labelExtractorMap, Summary summary) {
-        super(labelNames, labelMissingStrategy, labelExtractorMap, summary);
+    private static final Histogram.Child FAKE_CHILD = Histogram.build()
+            .name("fake_histogram").help("fake")
+            .labelNames("fake").buckets(10, 20)
+            .create()
+            .labels("fake");
+
+    protected HistogramWrapper(LabelNames labelNames, LabelMissingStrategy labelMissingStrategy, Map<Class<?>, LabelExtractor<?>> labelExtractorMap, Histogram histogram) {
+        super(labelNames, labelMissingStrategy, labelExtractorMap, histogram);
     }
+
 
     public void observe(double amt) {
         try {
@@ -74,7 +77,7 @@ public class SummaryWrapper extends BaseCollectorWrapper<SummaryWrapper, Summary
         }
     }
 
-    public Summary.Timer startTimer() {
+    public Histogram.Timer startTimer() {
         try {
             if (shouldSkip()) {
                 return FAKE_CHILD.startTimer();
@@ -106,6 +109,7 @@ public class SummaryWrapper extends BaseCollectorWrapper<SummaryWrapper, Summary
         }
     }
 
+
     public <E> E time(Callable<E> timeable) {
         try {
             if (shouldSkip()) {
@@ -117,23 +121,6 @@ public class SummaryWrapper extends BaseCollectorWrapper<SummaryWrapper, Summary
             }
 
             return realCollector.labels(labels).time(timeable);
-        } finally {
-            cleanLabels();
-        }
-    }
-
-    public Summary.Child.Value get() {
-        try {
-            if (shouldSkip()) {
-                return FAKE_CHILD.get();
-            }
-
-            String[] labels = getCurrentLabels();
-            if (ArrayUtils.isEmpty(labels)) {
-                return realCollector.get();
-            }
-
-            return realCollector.labels(labels).get();
         } finally {
             cleanLabels();
         }

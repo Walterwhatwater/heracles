@@ -1,61 +1,62 @@
-package io.heracles.wrapper.base;
+package io.heracles.wrapper;
 
 import io.heracles.label.LabelExtractor;
 import io.heracles.label.LabelMissingStrategy;
 import io.heracles.label.LabelNames;
-import io.prometheus.client.Histogram;
+import io.heracles.wrapper.base.BaseCollectorWrapper;
+import io.heracles.wrapper.base.BaseWrapperBuilder;
+import io.prometheus.client.Summary;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.Map;
 import java.util.concurrent.Callable;
 
 /**
- * 带标签解析的Histogram
+ * 带标签解析的Summary
  *
  * @author walter
- * @date 2021/01/08 00:00
+ * @date 2021/01/08 00:09
  **/
-public class HistogramWrapper extends BaseCollectorWrapper<HistogramWrapper, Histogram> {
-    public static class Builder extends BaseWrapperBuilder<HistogramWrapper, Builder, Histogram, Histogram.Builder> {
+public class SummaryWrapper extends BaseCollectorWrapper<SummaryWrapper, Summary> {
+    public static class Builder extends BaseWrapperBuilder<SummaryWrapper, Builder, Summary, Summary.Builder> {
         protected Builder() {
-            super(Histogram.build());
+            super(Summary.build());
         }
 
-        public Builder buckets(double... buckets) {
-            realBuilder.buckets(buckets);
+        public Builder quantile(double quantile, double error) {
+            realBuilder.quantile(quantile, error);
             return this;
         }
 
-        public Builder linearBuckets(double start, double width, int count) {
-            realBuilder.linearBuckets(start, width, count);
+        public Builder maxAgeSeconds(long maxAgeSeconds) {
+            realBuilder.maxAgeSeconds(maxAgeSeconds);
             return this;
         }
 
-        public Builder exponentialBuckets(double start, double factor, int count) {
-            realBuilder.exponentialBuckets(start, factor, count);
+        public Builder ageBuckets(int ageBuckets) {
+            realBuilder.ageBuckets(ageBuckets);
             return this;
         }
 
         @Override
-        protected HistogramWrapper create(LabelNames labelNames, LabelMissingStrategy labelMissingStrategy, Map<Class<?>, LabelExtractor<?>> labelExtractorMap, Histogram histogram) {
-            return new HistogramWrapper(labelNames, labelMissingStrategy, labelExtractorMap, histogram);
+        protected SummaryWrapper create(LabelNames labelNames, LabelMissingStrategy labelMissingStrategy, Map<Class<?>, LabelExtractor<?>> labelExtractorMap, Summary summary) {
+            return new SummaryWrapper(labelNames, labelMissingStrategy, labelExtractorMap, summary);
         }
     }
+
+    private static final Summary.Child FAKE_CHILD = Summary.build()
+            .name("fake_summary").help("fake").quantile(0.5, 0.1)
+            .labelNames("fake")
+            .create()
+            .labels("fake");
 
     public static Builder build() {
         return new Builder();
     }
 
-    private static final Histogram.Child FAKE_CHILD = Histogram.build()
-            .name("fake_histogram").help("fake")
-            .labelNames("fake").buckets(10, 20)
-            .create()
-            .labels("fake");
-
-    protected HistogramWrapper(LabelNames labelNames, LabelMissingStrategy labelMissingStrategy, Map<Class<?>, LabelExtractor<?>> labelExtractorMap, Histogram histogram) {
-        super(labelNames, labelMissingStrategy, labelExtractorMap, histogram);
+    protected SummaryWrapper(LabelNames labelNames, LabelMissingStrategy labelMissingStrategy, Map<Class<?>, LabelExtractor<?>> labelExtractorMap, Summary summary) {
+        super(labelNames, labelMissingStrategy, labelExtractorMap, summary);
     }
-
 
     public void observe(double amt) {
         try {
@@ -75,7 +76,7 @@ public class HistogramWrapper extends BaseCollectorWrapper<HistogramWrapper, His
         }
     }
 
-    public Histogram.Timer startTimer() {
+    public Summary.Timer startTimer() {
         try {
             if (shouldSkip()) {
                 return FAKE_CHILD.startTimer();
@@ -107,7 +108,6 @@ public class HistogramWrapper extends BaseCollectorWrapper<HistogramWrapper, His
         }
     }
 
-
     public <E> E time(Callable<E> timeable) {
         try {
             if (shouldSkip()) {
@@ -119,6 +119,23 @@ public class HistogramWrapper extends BaseCollectorWrapper<HistogramWrapper, His
             }
 
             return realCollector.labels(labels).time(timeable);
+        } finally {
+            cleanLabels();
+        }
+    }
+
+    public Summary.Child.Value get() {
+        try {
+            if (shouldSkip()) {
+                return FAKE_CHILD.get();
+            }
+
+            String[] labels = getCurrentLabels();
+            if (ArrayUtils.isEmpty(labels)) {
+                return realCollector.get();
+            }
+
+            return realCollector.labels(labels).get();
         } finally {
             cleanLabels();
         }
