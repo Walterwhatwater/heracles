@@ -1,6 +1,6 @@
 package io.heracles.wrapper;
 
-import io.heracles.label.LabelExtractor;
+import io.heracles.label.extractor.LabelExtractor;
 import io.heracles.label.LabelMissingStrategy;
 import io.heracles.label.LabelNames;
 import io.heracles.wrapper.base.BaseCollectorWrapper;

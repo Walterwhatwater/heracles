@@ -1,13 +1,12 @@
 package io.heracles.wrapper.base;
 
-import io.heracles.label.LabelExtractor;
+import io.heracles.label.extractor.LabelExtractor;
 import io.heracles.label.LabelMissingStrategy;
 import io.heracles.label.LabelNames;
 import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.SimpleCollector;
 import org.apache.commons.lang3.ArrayUtils;
 
-import java.rmi.registry.Registry;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;

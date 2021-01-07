@@ -1,4 +1,7 @@
-package io.heracles.label;
+package io.heracles.label.extractor;
+
+import io.heracles.label.LabelNames;
+import io.heracles.label.Labels;
 
 /**
  * 标签解析

@@ -1,7 +1,7 @@
 package io.heracles.wrapper.base;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.heracles.label.LabelExtractor;
+import io.heracles.label.extractor.LabelExtractor;
 import io.heracles.label.LabelMissingStrategy;
 import io.heracles.label.LabelNames;
 import io.heracles.label.Labels;
