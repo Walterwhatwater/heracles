@@ -3,9 +3,11 @@ package io.heracles.wrapper.base;
 import io.heracles.label.LabelExtractor;
 import io.heracles.label.LabelMissingStrategy;
 import io.heracles.label.LabelNames;
+import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.SimpleCollector;
 import org.apache.commons.lang3.ArrayUtils;
 
+import java.rmi.registry.Registry;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -159,7 +161,17 @@ public abstract class BaseWrapperBuilder<Wrapper extends BaseCollectorWrapper<Wr
      * @see SimpleCollector.Builder#register()
      */
     public Wrapper wrap() {
-        RealCollector realCollector = realBuilder.labelNames(this.labelNames.toArray()).register();
+        return wrap(CollectorRegistry.defaultRegistry);
+    }
+
+    /**
+     * 调用实际构造器register方法生成实际采集器，并包装成Collector Wrapper
+     *
+     * @return Collector Wrapper
+     * @see SimpleCollector.Builder#register(CollectorRegistry)
+     */
+    public Wrapper wrap(CollectorRegistry registry) {
+        RealCollector realCollector = realBuilder.labelNames(this.labelNames.toArray()).register(registry);
         return create(this.labelNames, this.labelMissingStrategy, this.labelExtractorMap, realCollector);
     }
 
